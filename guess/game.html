@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ACCESS IT部门 の 你来比划我来猜</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1"
+    />
+    <link rel="stylesheet" href="../utils/layui/css/layui.css" />
+    <link rel="stylesheet" href="../css/guess.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- 剩余时间 -->
+      <div id="time-bar">
+        <div
+          id="time-bar-process"
+          :style="{background: bgColor, width: barWidth}"
+        ></div>
+      </div>
+
+      <!-- 答题卡 -->
+      <div id="questions">
+        <div v-if="itv" class="question" :id="'questions-'+random">
+          {{word[random]}}
+        </div>
+        <div v-else class="question" :id="'questions-'+num">! 游戏结束 !</div>
+      </div>
+
+      <!-- 操作 -->
+      <div class="buttons buttons-op-tof">
+        <button
+          class="layui-btn layui-btn-normal layui-btn-radius"
+          @click="nextOne(3)"
+        >
+          跳过这一题
+        </button>
+        <button
+          class="layui-btn layui-btn-big layui-btn-green layui-btn-radius"
+          @click="nextOne(1)"
+        >
+          正确
+        </button>
+        <button
+          class="layui-btn layui-btn-big layui-btn-danger layui-btn-radius"
+          @click="nextOne(2)"
+        >
+          错误
+        </button>
+      </div>
+      <!-- 操作 -->
+      <div class="buttons buttons-op-switch">
+        <button
+          class="layui-btn layui-btn-normal layui-btn-radius"
+          @click="onRestart"
+        >
+          重新开始游戏
+        </button>
+      </div>
+      <!-- 统计信息 -->
+      <div id="statistic-info">
+        正确:
+        <span id="statistic-info-correct">{{this.qCorrectNum}}</span>
+        题 &nbsp; 错误:
+        <span id="statistic-info-error">{{this.qErrorNum}}</span>
+        题 &nbsp; 跳过:
+        <span id="statistic-info-skip">{{this.qSkipNum}}</span>
+        题 &nbsp;
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="../js/common.js"></script>
+    <script src="../utils/layui/layui.js"></script>
+
+    <script>
+      var qTotalNum = GetQueryString("qNum"); // 总数量
+
+      function GetQueryString(name) {
+        var href = decodeURI(decodeURI(window.location.search));
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = href.substr(1).match(reg);
+        if (r != null) return unescape(r[2]);
+        return null;
+      }
+      var app = new Vue({
+        el: "#app",
+        data: {
+          word: [],
+          num: 0,
+          random: 0,
+          itv: 0,
+          qCorrectNum: 0, // 正确的数量
+          qErrorNum: 0, // 错误的数量
+          qSkipNum: 0, // 跳过的数量
+          bgColor: "green",
+          barWidth: 0,
+        },
+        methods: {
+          getWord() {
+            this.word = getQuestion().word;
+            this.random = this.randomCount();
+          },
+          randomCount() {
+            return Math.ceil(Math.random() * this.word.length);
+          },
+          // 切换题目
+          nextOne(op) {
+            if (
+              this.qCorrectNum + this.qErrorNum + this.qSkipNum + 1 >=
+              qTotalNum
+            ) {
+              clearInterval(this.itv);
+            }
+            if (!this.itv) {
+              return;
+            }
+
+            if (
+              this.qCorrectNum + this.qErrorNum + this.qSkipNum + 1 >
+              qTotalNum
+            ) {
+              layui.use("layer", function () {
+                var layer = layui.layer;
+                layer.msg("游戏结束 !");
+              });
+              return;
+            }
+            this.random = this.randomCount();
+
+            switch (op) {
+              case 1: // 正确
+                this.qCorrectNum++;
+                break;
+              case 2: // 错误
+                this.qErrorNum++;
+                break;
+              case 3: // 跳过这一题
+                this.qSkipNum++;
+                break;
+              default:
+                break;
+            }
+          },
+
+          // ios截取参数字符串
+          GetQueryString(name) {
+            var href = decodeURI(decodeURI(window.location.search));
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+            var r = href.substr(1).match(reg);
+            if (r != null) return unescape(r[2]);
+            return null;
+          },
+          onRestart() {
+            if (confirm("确定要重新开始游戏吗？")) {
+              window.location.href = "index.html";
+            }
+          },
+        },
+        created() {
+          this.num = GetQueryString("qNum");
+          this.time = GetQueryString("qTime");
+        },
+        mounted() {
+          const _this = this;
+          this.getWord();
+
+          // 计时开始
+          var qTime = GetQueryString("qTime"); // total time
+          var sec = 0; // time already used
+
+          this.itv = setInterval(function () {
+            sec++;
+            bi = (sec / qTime) * 100;
+
+            if (bi >= 50) {
+              _this.bgColor = "orange";
+            }
+
+            if (bi >= 75) {
+              _this.bgColor = "red";
+            }
+            _this.barWidth = bi + "%";
+
+            if (bi >= 100) {
+              clearInterval(_this.itv);
+              _this.itv = null;
+              layui.use("layer", function () {
+                var layer = layui.layer;
+                layer.msg("时间到了 !");
+              });
+            }
+          }, 1000);
+        },
+      });
+    </script>
+  </body>
+</html>
